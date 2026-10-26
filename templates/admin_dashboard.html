@@ -1,0 +1,274 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;" class="reveal-anim">
+    <h2><i class="fa-solid fa-chart-line"></i> Admin Dashboard</h2>
+    <p style="color: var(--text-muted);">Overview of system analytics and inventory.</p>
+</div>
+
+<div class="dashboard-grid">
+    <div class="card glass reveal-anim" style="animation-delay: 0.1s;">
+        <div class="card-title"><i class="fa-solid fa-users"></i> Total Users</div>
+        <div class="card-value">{{ total_users }}</div>
+    </div>
+    <div class="card glass reveal-anim" style="animation-delay: 0.2s;">
+        <div class="card-title"><i class="fa-solid fa-hand-holding-droplet"></i> Total Units Donated</div>
+        <div class="card-value">{{ total_donations }}</div>
+    </div>
+    <div class="card glass reveal-anim" style="animation-delay: 0.3s;">
+        <div class="card-title"><i class="fa-solid fa-boxes-stacked"></i> Inventory Health</div>
+        <div class="card-value">{{ inventory|length }}</div>
+        <p style="font-size: 0.9rem; color: var(--success);">Active Batches</p>
+    </div>
+</div>
+
+<!-- Charts Section -->
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; margin-top: 2rem;">
+    <div class="card glass reveal-anim" style="animation-delay: 0.4s;">
+        <h3><i class="fa-solid fa-chart-area"></i> Donation Trends (Last 7 Days)</h3>
+        <div style="height: 300px;">
+            <canvas id="donationChart"></canvas>
+        </div>
+    </div>
+    <div class="card glass reveal-anim" style="animation-delay: 0.5s;">
+        <h3><i class="fa-solid fa-chart-pie"></i> Blood Group Distribution</h3>
+        <div style="height: 300px;">
+            <canvas id="distributionChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Notifications Section -->
+{% if notifications %}
+<div class="card glass reveal-anim" style="margin-bottom: 2rem; border-left: 4px solid var(--primary); animation-delay: 0.1s;">
+    <h3 style="color: var(--primary);"><i class="fa-solid fa-bell"></i> System Notifications</h3>
+    <ul style="list-style: none; padding: 0; margin-top: 1rem;">
+        {% for notif in notifications %}
+        {% if not notif.is_read %}
+        <li style="padding: 1rem; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: var(--text-main);"><i class="fa-solid fa-message" style="margin-right: 0.5rem; opacity: 0.7;"></i> {{ notif.message }}</span>
+            <form method="POST" action="{{ url_for('mark_notification_read', notif_id=notif.id) }}">
+                <button type="submit" class="btn btn-sm" style="font-size: 0.8rem; background: transparent; border: 1px solid var(--primary); color: var(--primary);">Dismiss</button>
+            </form>
+        </li>
+        {% endif %}
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<div style="margin-top: 3rem; display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
+    <div class="card glass">
+        <h3>Current Blood Inventory</h3>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Blood Group</th>
+                    <th>City</th>
+                    <th>Units</th>
+                    <th>Expiry Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in inventory %}
+                <tr>
+                    <td><strong>{{ item.blood_group }}</strong></td>
+                    <td>{{ item.city }}</td>
+                    <td>{{ item.units }}</td>
+                    <td>{{ item.expiry_date.strftime('%Y-%m-%d') }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="4">No inventory available.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card glass">
+        <h3 style="color: var(--danger);">🚨 Expiry Alerts</h3>
+        <p style="font-size: 0.9rem; margin-bottom: 1rem;">Units expiring within 5 days</p>
+        {% for alert in expiring_soon %}
+        <div style="padding: 1rem; border-left: 4px solid var(--danger); background: var(--glass-border); margin-bottom: 1rem; border-radius: 4px;">
+            <strong>{{ alert.blood_group }}</strong> in {{ alert.city }}<br>
+            {{ alert.units }} units expiring on {{ alert.expiry_date.strftime('%Y-%m-%d') }}
+        </div>
+        {% else %}
+        <p style="color: var(--success);">All blood units are fresh.</p>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="card glass" style="margin-top: 2rem;">
+    <h3 style="color: var(--primary);">🚑 Priority Request Queue</h3>
+    <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">Process nationwide requests sorted automatically by emergency severity.</p>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Tracker ID</th>
+                <th>Group</th>
+                <th>Units Needed</th>
+                <th>Priority</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for req in pending_requests %}
+            <tr>
+                <td><strong>{{ req.unique_id }}</strong></td>
+                <td>
+                    {{ req.blood_group }}
+                    {% if req.suggested_blood_group and req.status in ['Alternative Suggested', 'Accepted Alternative'] %}
+                        <br><small style="color: var(--info);">Suggested: {{ req.suggested_blood_group }}</small>
+                    {% endif %}
+                </td>
+                <td>{{ req.units }}</td>
+                <td>
+                    {% if req.priority_level == 'Emergency' or req.priority_level == 'Critical' %}
+                        <span style="color: var(--danger); font-weight: 800;">🛑 {{ req.priority_level }}</span>
+                    {% else %}
+                        <span style="font-weight: 600;">{{ req.priority_level }}</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if req.status == 'Pending' or req.status == 'Accepted Alternative' %}
+                    <form method="POST" action="{{ url_for('approve_request', req_id=req.id) }}" style="display:inline;">
+                        <button type="submit" class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+                            {% if req.status == 'Accepted Alternative' %}Finalize Alternative{% else %}Approve & Allocate{% endif %}
+                        </button>
+                    </form>
+                    {% else %}
+                        <span class="badge badge-info">{{ req.status }}</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5">No pending requests in the system.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- New Section: Tracking Recent Users & Donations -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 2rem;">
+    <!-- Registered Users Table -->
+    <div class="card glass">
+        <h3 style="color: var(--info);"><i class="fa-solid fa-users"></i> Recent Users & Hospitals</h3>
+        <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">Tracking top 15 lately joined members.</p>
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Role</th>
+                        <th>City / Group</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in recent_users %}
+                    <tr>
+                        <td><strong>{{ u.name }}</strong></td>
+                        <td>
+                            {% if u.role == 'hospital' %}
+                                <span class="badge badge-info"><i class="fa-solid fa-hospital"></i> Hospital</span>
+                            {% elif u.role == 'donor' %}
+                                <span class="badge badge-success"><i class="fa-solid fa-hand-holding-heart"></i> Donor</span>
+                            {% else %}
+                                <span class="badge badge-warning"><i class="fa-solid fa-bed-pulse"></i> Receiver</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ u.city }} ({{ u.blood_group }})</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="3">No registered users found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Recent Donations Table -->
+    <div class="card glass">
+        <h3 style="color: var(--success);"><i class="fa-solid fa-droplet"></i> Recent Blood Donations</h3>
+        <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">Tracking top 15 latest supply drops.</p>
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Donor Name</th>
+                        <th>Date & Units</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in recent_donations %}
+                    <tr>
+                        <td><strong>{{ d.donor.name }}</strong><br><small style="color: var(--text-muted);">{{ d.donor.blood_group }} / {{ d.donor.city }}</small></td>
+                        <td>{{ d.donation_date.strftime('%Y-%m-%d') }}<br><strong>{{ d.units_donated }} Units</strong></td>
+                        <td><span class="badge badge-success"><i class="fa-solid fa-check-circle"></i> {{ d.status }}</span></td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="3">No recent donations.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js and Custom Initialization -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const ctxDonation = document.getElementById('donationChart').getContext('2d');
+        const donationChart = new Chart(ctxDonation, {
+            type: 'line',
+            data: {
+                labels: {{ chart_labels|tojson }},
+                datasets: [{
+                    label: 'Units Donated',
+                    data: {{ chart_values|tojson }},
+                    borderColor: '#d63031',
+                    backgroundColor: 'rgba(214, 48, 49, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    borderWidth: 3,
+                    pointBackgroundColor: '#d63031'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+
+        const ctxDist = document.getElementById('distributionChart').getContext('2d');
+        const distributionChart = new Chart(ctxDist, {
+            type: 'doughnut',
+            data: {
+                labels: {{ dist_labels|tojson }},
+                datasets: [{
+                    data: {{ dist_values|tojson }},
+                    backgroundColor: [
+                        '#d63031', '#e74c3c', '#ff7675', '#fab1a0', 
+                        '#00b894', '#00cec9', '#0984e3', '#6c5ce7'
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: 'var(--text-main)' } }
+                },
+                cutout: '70%'
+            }
+        });
+    });
+</script>
+{% endblock %}

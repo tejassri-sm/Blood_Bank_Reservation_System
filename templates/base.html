@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BloodLife - Premium Blood Bank</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar glass">
+        <a href="{{ url_for('index') }}" class="nav-brand">
+            <i class="fa-solid fa-droplet"></i> BloodLife
+        </a>
+        <div class="nav-links">
+            <a href="{{ url_for('index') }}">Home</a>
+            {% if session.get('user_id') %}
+                <a href="{{ url_for('dashboard') }}">Dashboard</a>
+                <a href="{{ url_for('logout') }}">Logout ({{ session.get('user_name') }})</a>
+            {% else %}
+                <a href="{{ url_for('login') }}">Login</a>
+                <a href="{{ url_for('register') }}">Register</a>
+            {% endif %}
+        </div>
+    </nav>
+
+    <div class="theme-toggle" onclick="toggleTheme()" style="position: fixed; bottom: 30px; right: 30px; z-index: 1000; width: 50px; height: 50px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 15px var(--primary-glow); transition: transform 0.3s ease;">
+        <i class="fas fa-moon" id="theme-icon"></i>
+    </div>
+
+    <div class="alerts-container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="glass alert alert-{{ category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+
+    <script>
+        // Theme Toggle Logic
+        function toggleTheme() {
+            const body = document.documentElement; // Best for CSS variables
+            const icon = document.getElementById('theme-icon');
+            const currentTheme = body.getAttribute('data-theme');
+            
+            if (currentTheme === 'dark') {
+                body.removeAttribute('data-theme');
+                localStorage.setItem('theme', 'light');
+                icon.className = 'fas fa-moon';
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                localStorage.setItem('theme', 'dark');
+                icon.className = 'fas fa-sun';
+            }
+        }
+
+        // Initialize Theme
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            document.getElementById('theme-icon').className = 'fas fa-sun';
+        }
+
+        // Auto-dismiss alerts
+        setTimeout(() => {
+            document.querySelectorAll('.alert').forEach(el => {
+                el.style.opacity = '0';
+                setTimeout(() => el.remove(), 300);
+            });
+        }, 5000);
+        // Auto-update dashboard metrics and tables without refreshing page
+        if (window.location.pathname.includes('/dashboard')) {
+            setInterval(() => {
+                fetch(window.location.href)
+                .then(response => response.text())
+                .then(html => {
+                    const doc = new DOMParser().parseFromString(html, 'text/html');
+                    const selectorsToUpdate = ['.dashboard-grid', '.table', 'ul'];
+                    selectorsToUpdate.forEach(selector => {
+                        const freshNodes = doc.querySelectorAll(selector);
+                        const currentNodes = document.querySelectorAll(selector);
+                        freshNodes.forEach((node, index) => {
+                            if (currentNodes[index]) {
+                                // Compare inner HTML to avoid unnecessary repaints
+                                if (currentNodes[index].innerHTML !== node.innerHTML) {
+                                    currentNodes[index].innerHTML = node.innerHTML;
+                                }
+                            }
+                        });
+                    });
+                })
+                .catch(err => console.error("Error fetching updates:", err));
+            }, 5000); // Polls every 5 seconds for real-time updates
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,180 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+    <h2>Hospital Bulk Request Portal</h2>
+    <p style="color: var(--text-muted);">Emergency Requests & Nationwide Inventory Access</p>
+</div>
+
+<!-- Notifications Section -->
+{% if notifications %}
+<div class="card glass" style="margin-bottom: 2rem; border-left: 4px solid var(--info);">
+    <h3 style="color: var(--info);">🔔 Notifications</h3>
+    <ul style="list-style: none; padding: 0; margin-top: 1rem;">
+        {% for notif in notifications %}
+        {% if not notif.is_read %}
+        <li style="padding: 1rem; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center;">
+            <span>{{ notif.message }}</span>
+            <form method="POST" action="{{ url_for('mark_notification_read', notif_id=notif.id) }}">
+                <button type="submit" class="btn btn-sm" style="font-size: 0.8rem; background: transparent; border: 1px solid var(--info); color: var(--info);">Mark as Read</button>
+            </form>
+        </li>
+        {% endif %}
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+    <!-- Search Section -->
+    <div class="card glass">
+        <h3>🔍 Emergency Search</h3>
+        <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+            <input type="text" id="searchCity" class="form-control" placeholder="Search by City">
+            <select id="searchGroup" class="form-control" style="width: auto;">
+                <option value="">Any Group</option>
+                <option value="A+">A+</option>
+                <option value="O+">O+</option>
+                <option value="B+">B+</option>
+                <option value="AB+">AB+</option>
+                <option value="A-">A-</option>
+                <option value="O-">O-</option>
+                <option value="B-">B-</option>
+                <option value="AB-">AB-</option>
+                <option value="Bombay">Bombay</option>
+            </select>
+            <button onclick="performSearch()" class="btn btn-primary">Locate Units</button>
+        </div>
+
+        <div id="searchResults" style="margin-top: 1.5rem;">
+            <!-- Search results populated by JS -->
+            <p style="color: var(--text-muted); text-align: center;">Smart Compatible results will appear here.</p>
+        </div>
+    </div>
+
+    <!-- Request Form Section -->
+    <div class="card glass">
+        <h3>📝 Bulk Blood Request</h3>
+        <form method="POST" action="{{ url_for('request_blood') }}" style="margin-top: 1.5rem;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label">Blood Group Needed</label>
+                    <select name="blood_group" class="form-control" required>
+                        <option value="A+">A+</option>
+                        <option value="O+">O+</option>
+                        <option value="B+">B+</option>
+                        <option value="AB+">AB+</option>
+                        <option value="A-">A-</option>
+                        <option value="O-">O-</option>
+                        <option value="B-">B-</option>
+                        <option value="AB-">AB-</option>
+                        <option value="Bombay">Bombay Blood</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Units Needed (Bulk)</label>
+                    <input type="number" name="units" class="form-control" required min="1" max="500">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">🚨 Priority Level</label>
+                <select name="priority" class="form-control" required>
+                    <option value="Normal">Routine Restock</option>
+                    <option value="Surgery">Scheduled Surgeries (High)</option>
+                    <option value="Critical">Critical Ward (Immediate)</option>
+                    <option value="Emergency">Mass Casualty Emergency</option>
+                </select>
+            </div>
+            
+            <button type="submit" class="btn btn-danger" style="width: 100%;">Dispatch Official Request</button>
+        </form>
+    </div>
+</div>
+
+<div class="card glass" style="margin-top: 2rem;">
+    <h3>Hospital Request Log ({{ user.name }})</h3>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Unique Tracker ID</th>
+                <th>Group</th>
+                <th>Units</th>
+                <th>Priority</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for req in reservations %}
+            <tr>
+                <td><strong>{{ req.unique_id }}</strong></td>
+                <td>{{ req.blood_group }}</td>
+                <td>{{ req.units }}</td>
+                <td>
+                    {% if req.priority_level == 'Critical' or req.priority_level == 'Emergency' %}
+                        <span style="color: var(--danger); font-weight: bold;">{{ req.priority_level }}</span>
+                    {% else %}
+                        {{ req.priority_level }}
+                    {% endif %}
+                </td>
+                <td>
+                    {% if req.status == 'Pending' %}
+                        <span style="color: var(--warning);">{{ req.status }}</span>
+                    {% elif req.status == 'Approved' %}
+                        <span style="color: var(--info);">{{ req.status }}</span>
+                    {% elif req.status == 'Alternative Suggested' %}
+                        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                            <span style="color: var(--danger);">{{ req.status }} ({{ req.suggested_blood_group }})</span>
+                            <form method="POST" action="{{ url_for('accept_alternative', req_id=req.id) }}">
+                                <button type="submit" class="btn btn-sm btn-primary" style="font-size: 0.8rem;">Accept Recommendation</button>
+                            </form>
+                        </div>
+                    {% elif req.status == 'Accepted Alternative' %}
+                        <span style="color: var(--info);">{{ req.status }} ({{ req.suggested_blood_group }})</span>
+                    {% else %}
+                        <span style="color: var(--success);">{{ req.status }}</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5">No hospital requests dispatched yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+    function performSearch() {
+        const city = document.getElementById('searchCity').value;
+        const group = encodeURIComponent(document.getElementById('searchGroup').value);
+        const resultsDiv = document.getElementById('searchResults');
+        
+        resultsDiv.innerHTML = '<p>Scanning inter-hospital network...</p>';
+        
+        fetch(`/search_blood?city=${city}&blood_group=${group}`)
+            .then(res => res.json())
+            .then(data => {
+                if(data.length === 0) {
+                    resultsDiv.innerHTML = '<p style="color: var(--warning);">No direct or compatible blood found in the specified location.</p>';
+                } else {
+                    let html = '<ul style="list-style: none; padding: 0;">';
+                    data.forEach(item => {
+                        html += `
+                        <li style="padding: 1rem; border: 1px solid var(--glass-border); border-radius: 8px; margin-bottom: 0.5rem; display: flex; justify-content: space-between;">
+                            <div>
+                                <strong style="color: var(--danger); font-size: 1.2rem;">${item.blood_group}</strong><br>
+                                <span style="font-size: 0.9rem; color: var(--text-muted);">${item.city}</span>
+                            </div>
+                            <div style="text-align: right;">
+                                <strong>${item.units} Units</strong><br>
+                                <span style="font-size: 0.8rem;">Exp: ${item.expiry_date}</span>
+                            </div>
+                        </li>`;
+                    });
+                    html += '</ul>';
+                    resultsDiv.innerHTML = html;
+                }
+            });
+    }
+</script>
+{% endblock %}

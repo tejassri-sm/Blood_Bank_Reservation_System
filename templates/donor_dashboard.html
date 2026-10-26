@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center;">
+    <div>
+        <h2>Hello, {{ user.name }}</h2>
+        <p style="color: var(--text-muted);">Donor Profile & Contribution Hub</p>
+    </div>
+    
+    {% if eligible %}
+    <span style="padding: 0.5rem 1rem; background: var(--success); color: white; border-radius: 20px; font-weight: bold;">
+        ✓ Eligible to Donate
+    </span>
+    {% else %}
+    <span style="padding: 0.5rem 1rem; background: var(--warning); color: black; border-radius: 20px; font-weight: bold;">
+        ⏳ Next donation in {{ 90 - days_since_last }} days
+    </span>
+    {% endif %}
+</div>
+
+{% if eligible %}
+<div class="card glass" style="margin-bottom: 2rem; border-left: 4px solid var(--success);">
+    <h3 style="color: var(--success);">Ready to Save a Life?</h3>
+    <p>You are eligible to donate today. Choose the number of units you wish to donate (Max 3).</p>
+    <form method="POST" action="{{ url_for('donate_blood') }}" style="margin-top: 1rem; display: flex; align-items: center; gap: 1rem;">
+        <select name="units" class="form-control" style="width: 100px;">
+            <option value="1">1 Unit</option>
+            <option value="2">2 Units</option>
+            <option value="3">3 Units</option>
+        </select>
+        <button type="submit" class="btn btn-primary" style="background-color: var(--success); box-shadow: 0 4px 15px rgba(42, 157, 143, 0.4);">Donate Blood Now</button>
+    </form>
+</div>
+{% endif %}
+
+<!-- Notifications Section -->
+{% if notifications %}
+<div class="card glass" style="margin-bottom: 2rem; border-left: 4px solid var(--info);">
+    <h3 style="color: var(--info);">🔔 Notifications</h3>
+    <ul style="list-style: none; padding: 0; margin-top: 1rem;">
+        {% for notif in notifications %}
+        {% if not notif.is_read %}
+        <li style="padding: 1rem; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center;">
+            <span>{{ notif.message }}</span>
+            <form method="POST" action="{{ url_for('mark_notification_read', notif_id=notif.id) }}">
+                <button type="submit" class="btn btn-sm" style="font-size: 0.8rem; background: transparent; border: 1px solid var(--info); color: var(--info);">Mark as Read</button>
+            </form>
+        </li>
+        {% endif %}
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<div class="dashboard-grid">
+    <div class="card glass" style="text-align: center;">
+        <div class="card-title">Blood Group</div>
+        <div class="card-value" style="color: var(--danger);">{{ user.blood_group }}</div>
+    </div>
+    <div class="card glass" style="text-align: center;">
+        <div class="card-title">Lives Saved (Est.)</div>
+        <div class="card-value">{{ lives_saved }}</div>
+    </div>
+    <div class="card glass" style="text-align: center;">
+        <div class="card-title">Total Donations</div>
+        <div class="card-value">{{ history|length }}</div>
+    </div>
+</div>
+
+<div class="card glass" style="margin-top: 3rem;">
+    <h3>Donation History & Safety Record</h3>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Units Donated</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for record in history %}
+            <tr>
+                <td>{{ record.donation_date.strftime('%B %d, %Y') }}</td>
+                <td>{{ record.units_donated }}</td>
+                <td><span style="color: var(--success);">{{ record.status }}</span></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="3">No donation history found. Start saving lives today!</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

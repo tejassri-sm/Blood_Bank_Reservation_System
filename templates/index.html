@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="hero reveal-anim" style="text-align: center; padding: 6rem 0; position: relative;">
+    <div class="floating" style="position: absolute; top: -20px; left: 10%; font-size: 3rem; color: var(--primary); opacity: 0.2;">
+        <i class="fa-solid fa-droplet"></i>
+    </div>
+    <div class="floating" style="position: absolute; bottom: 20px; right: 15%; font-size: 4rem; color: var(--primary); opacity: 0.15; animation-delay: 1s;">
+        <i class="fa-solid fa-heart-pulse"></i>
+    </div>
+
+    <h1 style="font-size: 4.5rem; font-weight: 800; margin-bottom: 1.5rem; background: linear-gradient(135deg, var(--primary), var(--secondary)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">
+        Save a Life, Give Blood
+    </h1>
+    <p style="font-size: 1.4rem; color: var(--text-muted); max-width: 700px; margin: 0 auto 3rem; line-height: 1.6;">
+        Every drop counts. Our AI-powered system ensures that your donation reaches those in critical need, anywhere in the nation.
+    </p>
+    
+    {% if not session.get('user_id') %}
+    <div style="display: flex; gap: 2rem; justify-content: center;">
+        <a href="{{ url_for('register') }}" class="btn btn-primary" style="padding: 1.2rem 2.5rem; font-size: 1.1rem; box-shadow: 0 10px 30px var(--primary-glow);">
+            <i class="fa-solid fa-user-plus"></i> Become a Donor
+        </a>
+        <a href="{{ url_for('login') }}" class="btn glass" style="color: var(--text-main); padding: 1.2rem 2.5rem; font-size: 1.1rem; border: 2px solid var(--primary);">
+            <i class="fa-solid fa-right-to-bracket"></i> Login
+        </a>
+    </div>
+    {% else %}
+    <div style="display: flex; gap: 2rem; justify-content: center;">
+        <a href="{{ url_for('dashboard') }}" class="btn btn-primary" style="padding: 1.2rem 2.5rem; font-size: 1.1rem;">
+            Go to My Dashboard
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<div class="dashboard-grid" style="margin-top: 6rem; padding-bottom: 4rem;">
+    <div class="card glass reveal-anim" style="animation-delay: 0.2s; padding: 3rem 2rem; text-align: center;">
+        <div style="font-size: 2.5rem; color: var(--primary); margin-bottom: 1.5rem;">
+            <i class="fa-solid fa-magnifying-glass-location"></i>
+        </div>
+        <h3 style="margin-bottom: 1rem;">Advanced Search</h3>
+        <p style="color: var(--text-muted);">Real-time nationwide tracking of available blood units across cities with precision filtering.</p>
+    </div>
+    <div class="card glass reveal-anim" style="animation-delay: 0.4s; padding: 3rem 2rem; text-align: center;">
+        <div style="font-size: 2.5rem; color: var(--info); margin-bottom: 1.5rem;">
+            <i class="fa-solid fa-microchip"></i>
+        </div>
+        <h3 style="margin-bottom: 1rem;">Smart Matching</h3>
+        <p style="color: var(--text-muted);">Our intelligent engine uses medical compatibility algorithms to suggest alternatives during shortages.</p>
+    </div>
+    <div class="card glass reveal-anim" style="animation-delay: 0.6s; padding: 3rem 2rem; text-align: center;">
+        <div style="font-size: 2.5rem; color: var(--danger); margin-bottom: 1.5rem;">
+            <i class="fa-solid fa-truck-medical"></i>
+        </div>
+        <h3 style="margin-bottom: 1rem;">Priority System</h3>
+        <p style="color: var(--text-muted);">Emergency and surgery requests are automatically prioritized and routed to the nearest available inventory.</p>
+    </div>
+</div>
+{% endblock %}

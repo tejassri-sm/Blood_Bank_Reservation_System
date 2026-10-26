@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div style="max-width: 600px; margin: 2rem auto;">
+    <div class="card glass">
+        <h2 style="margin-bottom: 1.5rem; text-align: center;">Join BloodLife</h2>
+        <form method="POST" action="{{ url_for('register') }}">
+            <div class="form-group">
+                <label class="form-label">Full Name / Hospital Name</label>
+                <input type="text" name="name" class="form-control" required>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Email Address</label>
+                <input type="email" name="email" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <input type="password" name="password" class="form-control" required>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Role</label>
+                <select name="role" class="form-control" required>
+                    <option value="donor">Donor</option>
+                    <option value="receiver">Receiver (Patient/Family)</option>
+                    <option value="hospital">Hospital / Clinic</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="last_donation_group" style="display: none;">
+                <label class="form-label">Last Donation Date (Optional, if you have donated before)</label>
+                <input type="date" name="last_donation_date" class="form-control">
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label">Blood Group</label>
+                    <select name="blood_group" class="form-control">
+                        <option value="A+">A+</option>
+                        <option value="A-">A-</option>
+                        <option value="B+">B+</option>
+                        <option value="B-">B-</option>
+                        <option value="O+">O+</option>
+                        <option value="O-">O-</option>
+                        <option value="AB+">AB+</option>
+                        <option value="AB-">AB-</option>
+                        <option value="Bombay">Bombay Blood Group (Rare)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">City</label>
+                    <input type="text" name="city" class="form-control" required placeholder="e.g. New York">
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Complete Registration</button>
+        </form>
+        <p style="text-align: center; margin-top: 1rem;">
+            Already have an account? <a href="{{ url_for('login') }}" style="color: var(--primary);">Login</a>
+        </p>
+    </div>
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var roleSelect = document.querySelector('select[name="role"]');
+        var lastDonationGroup = document.getElementById('last_donation_group');
+        
+        function toggleDonationDate() {
+            if (roleSelect.value === 'donor') {
+                lastDonationGroup.style.display = 'block';
+            } else {
+                lastDonationGroup.style.display = 'none';
+            }
+        }
+        
+        roleSelect.addEventListener('change', toggleDonationDate);
+        toggleDonationDate(); // Initialize on page load
+    });
+</script>
+{% endblock %}
